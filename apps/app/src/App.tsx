@@ -39,15 +39,15 @@ function App() {
         </form>
         <ul className="space-y-2">
           {todos.map((todo) => (
-            <div key={todo.id} className="flex justify-between items-center">
-              <li>{todo.text}</li>
+            <li key={todo.id} className="flex justify-between items-center">
+              {todo.text}
               <button
                 className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
                 onClick={() => handleDeleteTodo(todo.id)}
               >
                 삭제
               </button>
-            </div>
+            </li>
           ))}
         </ul>
       </main>
