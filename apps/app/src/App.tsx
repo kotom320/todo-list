@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function App() {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -16,10 +16,18 @@ function App() {
   const [draftRefs, setDraftRefs] = useState<number[]>([]);
   const [refOpenId, setRefOpenId] = useState<number | null>(null);
   const [filter, setFilter] = useState<"all" | "active" | "completed">("all");
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
 
   const filtered = todos.filter((t) =>
     filter === "all" ? true : filter === "active" ? !t.completed : t.completed
   );
+  const total = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const safePage = Math.min(page, totalPages);
+  const start = (safePage - 1) * pageSize;
+  const end = start + pageSize;
+  const pageTodos = filtered.slice(start, end);
 
   const handleEditTodo = (id: number, text: string) => {
     setEditTodoId(id);
@@ -92,6 +100,15 @@ function App() {
       );
     });
   };
+
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [totalPages, page]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter]);
+
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10">
       <header>
@@ -114,22 +131,25 @@ function App() {
             추가
           </button>
         </form>
-        <div className="flex gap-2 justify-end">
-          {(["all", "active", "completed"] as const).map((f) => (
-            <button
-              key={f}
-              type="button"
-              className={`px-2 py-1 rounded border text-sm ${
-                filter === f ? "bg-gray-100 font-semibold" : ""
-              }`}
-              onClick={() => setFilter(f)}
-            >
-              {f}
-            </button>
-          ))}
+        <div className="flex justify-between items-center">
+          <p>{total} tasks</p>
+          <div className="flex gap-2">
+            {(["all", "active", "completed"] as const).map((f) => (
+              <button
+                key={f}
+                type="button"
+                className={`px-2 py-1 rounded border text-sm ${
+                  filter === f ? "bg-gray-100 font-semibold" : ""
+                }`}
+                onClick={() => setFilter(f)}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
         </div>
         <ul className="space-y-2">
-          {filtered.map((todo) => (
+          {pageTodos.map((todo) => (
             <li key={todo.id} className="flex justify-between items-center">
               {editTodoId === todo.id ? (
                 <div className="flex items-center gap-2 justify-between w-full">
@@ -256,6 +276,31 @@ function App() {
             </li>
           ))}
         </ul>
+        <div className="flex items-center justify-center pt-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className="px-3 py-1 rounded border disabled:opacity-50"
+              disabled={safePage <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              이전
+            </button>
+
+            <span className="text-sm">
+              {safePage} / {totalPages}
+            </span>
+
+            <button
+              type="button"
+              className="px-3 py-1 rounded border disabled:opacity-50"
+              disabled={safePage >= totalPages}
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+            >
+              다음
+            </button>
+          </div>
+        </div>
       </main>
     </div>
   );
