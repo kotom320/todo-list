@@ -27,6 +27,9 @@ export function useCreateTodo() {
             // 할 일 목록 새로고침
             queryClient.invalidateQueries({ queryKey: todoKeys.lists() });
         },
+        onError: (error) => {
+            console.error('생성 실패:', error);
+        },
     });
 }
 
@@ -42,6 +45,9 @@ export function useUpdateTodo() {
             queryClient.invalidateQueries({ queryKey: todoKeys.lists() });
 
         },
+        onError: (error) => {
+            console.error('수정 실패:', error);
+        },
     });
 }
 
@@ -55,6 +61,9 @@ export function useDeleteTodo() {
             // 할 일 목록 새로고침
             queryClient.invalidateQueries({ queryKey: todoKeys.lists() });
 
+        },
+        onError: (error) => {
+            console.error('삭제 실패:', error);
         },
     });
 }

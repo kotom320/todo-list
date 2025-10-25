@@ -57,18 +57,15 @@ function App() {
       (id) => existing.has(id) && id !== editTodoId
     );
 
-    try {
-      await updateTodoMutation.mutateAsync({
-        id: editTodoId,
-        updates: { text, references: refs },
-      });
-      setEditTodoId(null);
-      setEditTodoText("");
-      setDraftRefs([]);
-      setRefOpenId(null);
-    } catch (err) {
-      console.error(err);
-    }
+    await updateTodoMutation.mutateAsync({
+      id: editTodoId,
+      updates: { text, references: refs },
+    });
+
+    setEditTodoId(null);
+    setEditTodoText("");
+    setDraftRefs([]);
+    setRefOpenId(null);
   };
 
   const handleAddTodo = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -78,19 +75,11 @@ function App() {
     const text = tempText.trim();
     if (text === "") return;
 
-    try {
-      await createTodoMutation.mutateAsync({ text });
-    } catch (err) {
-      console.error(err);
-    }
+    await createTodoMutation.mutateAsync({ text });
   };
 
   const handleDeleteTodo = async (id: number) => {
-    try {
-      await deleteTodoMutation.mutateAsync(id);
-    } catch (err) {
-      console.error(err);
-    }
+    await deleteTodoMutation.mutateAsync(id);
   };
 
   const handleToggleTodo = async (id: number) => {
@@ -107,14 +96,10 @@ function App() {
       }
     }
 
-    try {
-      await updateTodoMutation.mutateAsync({
-        id,
-        updates: { completed: !target.completed },
-      });
-    } catch (err) {
-      console.error(err);
-    }
+    await updateTodoMutation.mutateAsync({
+      id,
+      updates: { completed: !target.completed },
+    });
   };
 
   const handleCancelEdit = () => {
