@@ -3,10 +3,12 @@ import { useRef, useState } from "react";
 function App() {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [todos, setTodos] = useState<{ id: number; text: string }[]>([
-    { id: 1, text: "할 일 1" },
-    { id: 2, text: "할 일 2" },
-    { id: 3, text: "할 일 3" },
+  const [todos, setTodos] = useState<
+    { id: number; text: string; completed: boolean }[]
+  >([
+    { id: 1, text: "할 일 1", completed: false },
+    { id: 2, text: "할 일 2", completed: false },
+    { id: 3, text: "할 일 3", completed: false },
   ]);
   const handleAddTodo = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -15,12 +17,20 @@ function App() {
     const text = tempText.trim();
     if (text === "") return;
 
-    setTodos((prev) => [...prev, { id: Date.now(), text }]);
+    setTodos((prev) => [...prev, { id: Date.now(), text, completed: false }]);
     inputRef.current!.value = "";
     inputRef.current?.focus();
   };
   const handleDeleteTodo = (id: number) => {
     setTodos((prev) => prev.filter((todo) => todo.id !== id));
+  };
+  const handleToggleTodo = (id: number) => {
+    // todo: 참조가 있을 경우 완료상태 변경 필요
+    setTodos((prev) =>
+      prev.map((todo) =>
+        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+      )
+    );
   };
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10">
@@ -47,7 +57,17 @@ function App() {
         <ul className="space-y-2">
           {todos.map((todo) => (
             <li key={todo.id} className="flex justify-between items-center">
-              {todo.text}
+              <label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={todo.completed}
+                  onChange={() => handleToggleTodo(todo.id)}
+                />
+                <span className={`${todo.completed ? "line-through" : ""}`}>
+                  {todo.text}
+                </span>
+              </label>
+
               <button
                 className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
                 onClick={() => handleDeleteTodo(todo.id)}
