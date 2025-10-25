@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { todoApi } from "./api/todoApi";
 import { Pagination } from "./components/Pagination";
 import { TodoFilterComponent } from "./components/TodoFilter";
 import { TodoForm } from "./components/TodoForm";
@@ -7,32 +8,7 @@ import type { Todo } from "./types/todo";
 import { TodoFilter } from "./types/todo";
 
 function App() {
-  const [todos, setTodos] = useState<Todo[]>([
-    {
-      id: 1,
-      text: "할 일 1",
-      completed: false,
-      references: [2, 3],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 2,
-      text: "할 일 2",
-      completed: false,
-      references: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      id: 3,
-      text: "할 일 3",
-      completed: false,
-      references: [],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ]);
+  const [todos, setTodos] = useState<Todo[]>([]);
 
   const [editTodoId, setEditTodoId] = useState<number | null>(null);
   const [editTodoText, setEditTodoText] = useState<string>("");
@@ -64,81 +40,88 @@ function App() {
     setRefOpenId(null);
   };
 
-  const handleSaveEditTodo = () => {
+  const handleSaveEditTodo = async () => {
     const text = editTodoText.trim();
-    if (text === "") return;
+    if (text === "" || !editTodoId) return;
 
     const existing = new Set(todos.map((t) => t.id));
     const refs = draftRefs.filter(
       (id) => existing.has(id) && id !== editTodoId
     );
-    const nextTodos = todos.map((t) =>
-      t.id === editTodoId
-        ? { ...t, text, references: refs, updatedAt: new Date().toISOString() }
-        : t
-    );
 
-    setTodos(nextTodos);
-    setEditTodoId(null);
-    setEditTodoText("");
-    setDraftRefs([]);
-    setRefOpenId(null);
+    try {
+      const updatedTodo = await todoApi.updateTodo(editTodoId, {
+        text,
+        references: refs,
+      });
+      setTodos((prev) =>
+        prev.map((t) => (t.id === editTodoId ? updatedTodo : t))
+      );
+      setEditTodoId(null);
+      setEditTodoText("");
+      setDraftRefs([]);
+      setRefOpenId(null);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleAddTodo = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleAddTodo = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     const tempText = formData.get("text") as string;
     const text = tempText.trim();
     if (text === "") return;
 
-    setTodos((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        text,
-        completed: false,
-        references: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ]);
+    try {
+      const newTodo = await todoApi.createTodo(text);
+      setTodos((prev) => [...prev, newTodo]);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleDeleteTodo = (id: number) => {
-    setTodos((prev) =>
-      prev
-        .map((t) =>
-          t.references.includes(id)
-            ? { ...t, references: t.references.filter((r) => r !== id) } // ✅ 정리
-            : t
-        )
-        .filter((t) => t.id !== id)
-    );
-  };
-
-  const handleToggleTodo = (id: number) => {
-    setTodos((prev) => {
-      const target = prev.find((t) => t.id === id);
-      if (!target) return prev;
-      if (!target.completed) {
-        const allDone = target.references.every(
-          (ref) => prev.find((t) => t.id === ref)?.completed
-        );
-        if (!allDone) {
-          return prev;
-        }
-      }
-      return prev.map((todo) =>
-        todo.id === id
-          ? {
-              ...todo,
-              completed: !todo.completed,
-              updatedAt: new Date().toISOString(),
-            }
-          : todo
+  const handleDeleteTodo = async (id: number) => {
+    try {
+      await todoApi.deleteTodo(id);
+      setTodos((prev) =>
+        prev
+          .map((t) =>
+            t.references.includes(id)
+              ? { ...t, references: t.references.filter((r) => r !== id) }
+              : t
+          )
+          .filter((t) => t.id !== id)
       );
-    });
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleToggleTodo = async (id: number) => {
+    const target = todos.find((t) => t.id === id);
+    if (!target) return;
+
+    // 참조된 할 일들이 모두 완료되었는지 확인
+    if (!target.completed) {
+      const allDone = target.references.every(
+        (ref) => todos.find((t) => t.id === ref)?.completed
+      );
+      if (!allDone) {
+        return;
+      }
+    }
+
+    try {
+      const updatedTodo = await todoApi.updateTodo(id, {
+        completed: !target.completed,
+      });
+      setTodos((prev) =>
+        prev.map((todo) => (todo.id === id ? updatedTodo : todo))
+      );
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -159,6 +142,20 @@ function App() {
   const handleRefOpenToggle = (id: number) => {
     setRefOpenId((prev) => (prev === id ? null : id));
   };
+
+  // 초기 데이터 로딩
+  useEffect(() => {
+    const loadTodos = async () => {
+      try {
+        const data = await todoApi.getAllTodos();
+        setTodos(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    loadTodos();
+  }, []);
 
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
