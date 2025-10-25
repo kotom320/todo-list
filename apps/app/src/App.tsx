@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 function App() {
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const [todos, setTodos] = useState<{ id: number; text: string }[]>([
     { id: 1, text: "할 일 1" },
     { id: 2, text: "할 일 2" },
@@ -9,9 +11,13 @@ function App() {
   const handleAddTodo = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
-    const text = formData.get("text") as string;
+    const tempText = formData.get("text") as string;
+    const text = tempText.trim();
+    if (text === "") return;
 
     setTodos((prev) => [...prev, { id: Date.now(), text }]);
+    inputRef.current!.value = "";
+    inputRef.current?.focus();
   };
   const handleDeleteTodo = (id: number) => {
     setTodos((prev) => prev.filter((todo) => todo.id !== id));
@@ -29,6 +35,7 @@ function App() {
             placeholder="할 일 추가"
             className="flex-1 border rounded px-3 py-2"
             name="text"
+            ref={inputRef}
           />
           <button
             type="submit"
