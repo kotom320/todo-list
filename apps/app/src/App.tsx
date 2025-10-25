@@ -1,26 +1,51 @@
 import { useEffect, useRef, useState } from "react";
+import type { Todo } from "./types/todo";
+import { TodoFilter } from "./types/todo";
 
 function App() {
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const [todos, setTodos] = useState<
-    { id: number; text: string; completed: boolean; references: number[] }[]
-  >([
-    { id: 1, text: "할 일 1", completed: false, references: [2, 3] },
-    { id: 2, text: "할 일 2", completed: false, references: [] },
-    { id: 3, text: "할 일 3", completed: false, references: [] },
+  const [todos, setTodos] = useState<Todo[]>([
+    {
+      id: 1,
+      text: "할 일 1",
+      completed: false,
+      references: [2, 3],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 2,
+      text: "할 일 2",
+      completed: false,
+      references: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+    {
+      id: 3,
+      text: "할 일 3",
+      completed: false,
+      references: [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
   ]);
 
   const [editTodoId, setEditTodoId] = useState<number | null>(null);
   const [editTodoText, setEditTodoText] = useState<string>("");
   const [draftRefs, setDraftRefs] = useState<number[]>([]);
   const [refOpenId, setRefOpenId] = useState<number | null>(null);
-  const [filter, setFilter] = useState<"all" | "active" | "completed">("all");
+  const [filter, setFilter] = useState<TodoFilter>(TodoFilter.ALL);
   const [page, setPage] = useState(1);
   const pageSize = 5;
 
   const filtered = todos.filter((t) =>
-    filter === "all" ? true : filter === "active" ? !t.completed : t.completed
+    filter === TodoFilter.ALL
+      ? true
+      : filter === TodoFilter.ACTIVE
+      ? !t.completed
+      : t.completed
   );
   const total = filtered.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -46,7 +71,9 @@ function App() {
       (id) => existing.has(id) && id !== editTodoId
     );
     const nextTodos = todos.map((t) =>
-      t.id === editTodoId ? { ...t, text, references: refs } : t
+      t.id === editTodoId
+        ? { ...t, text, references: refs, updatedAt: new Date().toISOString() }
+        : t
     );
 
     setTodos(nextTodos);
@@ -65,7 +92,14 @@ function App() {
 
     setTodos((prev) => [
       ...prev,
-      { id: Date.now(), text, completed: false, references: [] },
+      {
+        id: Date.now(),
+        text,
+        completed: false,
+        references: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
     ]);
     inputRef.current!.value = "";
     inputRef.current?.focus();
@@ -96,7 +130,13 @@ function App() {
         }
       }
       return prev.map((todo) =>
-        todo.id === id ? { ...todo, completed: !todo.completed } : todo
+        todo.id === id
+          ? {
+              ...todo,
+              completed: !todo.completed,
+              updatedAt: new Date().toISOString(),
+            }
+          : todo
       );
     });
   };
@@ -134,18 +174,20 @@ function App() {
         <div className="flex justify-between items-center">
           <p>{total} tasks</p>
           <div className="flex gap-2">
-            {(["all", "active", "completed"] as const).map((f) => (
-              <button
-                key={f}
-                type="button"
-                className={`px-2 py-1 rounded border text-sm ${
-                  filter === f ? "bg-gray-100 font-semibold" : ""
-                }`}
-                onClick={() => setFilter(f)}
-              >
-                {f}
-              </button>
-            ))}
+            {[TodoFilter.ALL, TodoFilter.ACTIVE, TodoFilter.COMPLETED].map(
+              (f) => (
+                <button
+                  key={f}
+                  type="button"
+                  className={`px-2 py-1 rounded border text-sm ${
+                    filter === f ? "bg-gray-100 font-semibold" : ""
+                  }`}
+                  onClick={() => setFilter(f)}
+                >
+                  {f}
+                </button>
+              )
+            )}
           </div>
         </div>
         <ul className="space-y-2">
