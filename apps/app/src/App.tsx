@@ -10,6 +10,26 @@ function App() {
     { id: 2, text: "할 일 2", completed: false },
     { id: 3, text: "할 일 3", completed: false },
   ]);
+
+  const [editTodoId, setEditTodoId] = useState<number | null>(null);
+  const [editTodoText, setEditTodoText] = useState<string>("");
+
+  const handleEditTodo = (id: number, text: string) => {
+    setEditTodoId(id);
+    setEditTodoText(text);
+  };
+
+  const handleSaveEditTodo = () => {
+    const text = editTodoText.trim();
+    if (text === "") return;
+
+    setTodos((prev) =>
+      prev.map((todo) => (todo.id === editTodoId ? { ...todo, text } : todo))
+    );
+    setEditTodoId(null);
+    setEditTodoText("");
+  };
+
   const handleAddTodo = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
@@ -21,9 +41,11 @@ function App() {
     inputRef.current!.value = "";
     inputRef.current?.focus();
   };
+
   const handleDeleteTodo = (id: number) => {
     setTodos((prev) => prev.filter((todo) => todo.id !== id));
   };
+
   const handleToggleTodo = (id: number) => {
     // todo: 참조가 있을 경우 완료상태 변경 필요
     setTodos((prev) =>
@@ -57,23 +79,57 @@ function App() {
         <ul className="space-y-2">
           {todos.map((todo) => (
             <li key={todo.id} className="flex justify-between items-center">
-              <label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={todo.completed}
-                  onChange={() => handleToggleTodo(todo.id)}
-                />
-                <span className={`${todo.completed ? "line-through" : ""}`}>
-                  {todo.text}
-                </span>
-              </label>
-
-              <button
-                className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
-                onClick={() => handleDeleteTodo(todo.id)}
-              >
-                삭제
-              </button>
+              {editTodoId === todo.id ? (
+                <div className="flex items-center gap-2 justify-between w-full">
+                  <input
+                    type="text"
+                    value={editTodoText}
+                    onChange={(e) => setEditTodoText(e.target.value)}
+                    className="flex-1 border rounded px-3 py-2"
+                  />
+                  <div className="flex gap-2">
+                    <button
+                      className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                      onClick={() => handleSaveEditTodo()}
+                    >
+                      저장
+                    </button>
+                    <button
+                      className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                      onClick={() => setEditTodoId(null)}
+                    >
+                      취소
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <label className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={todo.completed}
+                      onChange={() => handleToggleTodo(todo.id)}
+                    />
+                    <span className={`${todo.completed ? "line-through" : ""}`}>
+                      {todo.text}
+                    </span>
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                      onClick={() => handleEditTodo(todo.id, todo.text)}
+                    >
+                      수정
+                    </button>
+                    <button
+                      className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                      onClick={() => handleDeleteTodo(todo.id)}
+                    >
+                      삭제
+                    </button>
+                  </div>
+                </>
+              )}
             </li>
           ))}
         </ul>
