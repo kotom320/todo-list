@@ -1,102 +1,76 @@
+import { addCorsHeaders } from '@/lib/cors';
+import { deleteTodo, todos, updateTodo } from '@/lib/data';
 import { NextRequest, NextResponse } from 'next/server';
 
-// 임시 데이터 저장소 (실제로는 데이터베이스 사용)
-let todos = [
-    {
-        id: 1,
-        text: "할 일 1",
-        completed: false,
-        references: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    },
-    {
-        id: 2,
-        text: "할 일 2",
-        completed: false,
-        references: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    },
-    {
-        id: 3,
-        text: "할 일 3",
-        completed: false,
-        references: [],
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-    },
-];
+
 
 // PUT /api/todos/[id] - 할 일 수정
 export async function PUT(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const id = parseInt(params.id);
+        const { id: idParam } = await params;
+        const id = parseInt(idParam);
         const body = await request.json();
         const { text, completed, references } = body;
-
         const todoIndex = todos.findIndex(todo => todo.id === id);
 
         if (todoIndex === -1) {
-            return NextResponse.json(
+            const response = NextResponse.json(
                 { error: '할 일을 찾을 수 없습니다.' },
                 { status: 404 }
             );
+            return addCorsHeaders(response);
         }
 
-        const updatedTodo = {
-            ...todos[todoIndex],
-            ...(text !== undefined && { text: text.trim() }),
-            ...(completed !== undefined && { completed }),
-            ...(references !== undefined && { references }),
-            updatedAt: new Date().toISOString(),
-        };
+        const updates: any = {};
+        if (text !== undefined) updates.text = text.trim();
+        if (completed !== undefined) updates.completed = completed;
+        if (references !== undefined) updates.references = references;
 
-        todos[todoIndex] = updatedTodo;
+        updateTodo(id, updates);
+        const updatedTodo = todos.find(todo => todo.id === id);
 
-        return NextResponse.json(updatedTodo);
+        const response = NextResponse.json(updatedTodo);
+        return addCorsHeaders(response);
     } catch (error) {
-        return NextResponse.json(
+        const response = NextResponse.json(
             { error: '서버 오류가 발생했습니다.' },
             { status: 500 }
         );
+        return addCorsHeaders(response);
     }
 }
 
 // DELETE /api/todos/[id] - 할 일 삭제
 export async function DELETE(
     request: NextRequest,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const id = parseInt(params.id);
+        const { id: idParam } = await params;
+        const id = parseInt(idParam);
 
         const todoIndex = todos.findIndex(todo => todo.id === id);
 
         if (todoIndex === -1) {
-            return NextResponse.json(
+            const response = NextResponse.json(
                 { error: '할 일을 찾을 수 없습니다.' },
                 { status: 404 }
             );
+            return addCorsHeaders(response);
         }
 
-        // 참조 정리
-        todos = todos.map(todo => ({
-            ...todo,
-            references: todo.references.filter(ref => ref !== id)
-        }));
+        deleteTodo(id);
 
-        // 할 일 삭제
-        todos.splice(todoIndex, 1);
-
-        return NextResponse.json({ message: '할 일이 삭제되었습니다.' });
+        const response = NextResponse.json({ message: '할 일이 삭제되었습니다.' });
+        return addCorsHeaders(response);
     } catch (error) {
-        return NextResponse.json(
+        const response = NextResponse.json(
             { error: '서버 오류가 발생했습니다.' },
             { status: 500 }
         );
+        return addCorsHeaders(response);
     }
 }
