@@ -13,21 +13,34 @@ function App() {
 
   const [editTodoId, setEditTodoId] = useState<number | null>(null);
   const [editTodoText, setEditTodoText] = useState<string>("");
+  const [draftRefs, setDraftRefs] = useState<number[]>([]);
+  const [refOpenId, setRefOpenId] = useState<number | null>(null);
 
   const handleEditTodo = (id: number, text: string) => {
     setEditTodoId(id);
     setEditTodoText(text);
+    const current = todos.find((t) => t.id === id);
+    setDraftRefs(current?.references ?? []);
+    setRefOpenId(null);
   };
 
   const handleSaveEditTodo = () => {
     const text = editTodoText.trim();
     if (text === "") return;
 
-    setTodos((prev) =>
-      prev.map((todo) => (todo.id === editTodoId ? { ...todo, text } : todo))
+    const existing = new Set(todos.map((t) => t.id));
+    const refs = draftRefs.filter(
+      (id) => existing.has(id) && id !== editTodoId
     );
+    const nextTodos = todos.map((t) =>
+      t.id === editTodoId ? { ...t, text, references: refs } : t
+    );
+
+    setTodos(nextTodos);
     setEditTodoId(null);
     setEditTodoText("");
+    setDraftRefs([]);
+    setRefOpenId(null);
   };
 
   const handleAddTodo = (e: React.FormEvent<HTMLFormElement>) => {
@@ -46,7 +59,15 @@ function App() {
   };
 
   const handleDeleteTodo = (id: number) => {
-    setTodos((prev) => prev.filter((todo) => todo.id !== id));
+    setTodos((prev) =>
+      prev
+        .map((t) =>
+          t.references.includes(id)
+            ? { ...t, references: t.references.filter((r) => r !== id) } // ✅ 정리
+            : t
+        )
+        .filter((t) => t.id !== id)
+    );
   };
 
   const handleToggleTodo = (id: number) => {
@@ -93,32 +114,83 @@ function App() {
             <li key={todo.id} className="flex justify-between items-center">
               {editTodoId === todo.id ? (
                 <div className="flex items-center gap-2 justify-between w-full">
-                  <input
-                    autoFocus
-                    type="text"
-                    value={editTodoText}
-                    onChange={(e) => setEditTodoText(e.target.value)}
-                    className="flex-1 border rounded px-3 py-2"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleSaveEditTodo();
-                      }
-                      if (e.key === "Escape") {
-                        e.preventDefault();
-                        setEditTodoId(null);
-                      }
-                    }}
-                  />
-                  <div className="flex gap-2">
+                  <div className="flex flex-col gap-2 w-full">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editTodoText}
+                      onChange={(e) => setEditTodoText(e.target.value)}
+                      className="flex-1 border rounded px-3 py-2"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          handleSaveEditTodo();
+                        }
+                        if (e.key === "Escape") {
+                          e.preventDefault();
+                          setEditTodoId(null);
+                        }
+                      }}
+                    />
+                    <div className="flex items-center justify-between relative">
+                      <span className="text-xs text-gray-500 flex-shrink-0">
+                        {draftRefs.length
+                          ? `${draftRefs.map((id) => `@${id}`).join(", ")}`
+                          : ""}
+                      </span>
+                      <button
+                        type="button"
+                        className="px-2 py-1 rounded border text-sm hover:bg-gray-50 flex-shrink-0"
+                        aria-expanded={refOpenId === todo.id}
+                        onClick={() =>
+                          setRefOpenId((prev) =>
+                            prev === todo.id ? null : todo.id
+                          )
+                        }
+                      >
+                        참조 선택
+                      </button>
+                      {refOpenId === todo.id && (
+                        <div className="absolute right-0 top-full mt-1 w-52 bg-white border rounded z-10">
+                          <div className="max-h-48 overflow-y-auto p-2">
+                            {todos
+                              .filter((t) => t.id !== todo.id)
+                              .map((c) => {
+                                const checked = draftRefs.includes(c.id);
+                                return (
+                                  <label
+                                    key={c.id}
+                                    className="flex items-center gap-2 text-sm px-2 py-1 rounded hover:bg-gray-50 cursor-pointer"
+                                  >
+                                    <input
+                                      type="checkbox"
+                                      checked={checked}
+                                      onChange={() => {
+                                        setDraftRefs((prev) =>
+                                          checked
+                                            ? prev.filter((id) => id !== c.id)
+                                            : [...prev, c.id]
+                                        );
+                                      }}
+                                    />
+                                    <span>{c.text}</span>
+                                  </label>
+                                );
+                              })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex gap-2 flex-shrink-0">
                     <button
-                      className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+                      className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 "
                       onClick={() => handleSaveEditTodo()}
                     >
                       저장
                     </button>
                     <button
-                      className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600"
+                      className="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 "
                       onClick={() => setEditTodoId(null)}
                     >
                       취소
@@ -127,7 +199,7 @@ function App() {
                 </div>
               ) : (
                 <>
-                  <div className="flex flex-col items-center gap-2">
+                  <div className="flex flex-col items-start gap-2">
                     <label className="flex items-center gap-2">
                       <input
                         type="checkbox"
@@ -146,7 +218,7 @@ function App() {
                       </span>
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-shrink-0">
                     <button
                       className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
                       onClick={() => handleEditTodo(todo.id, todo.text)}
