@@ -4,11 +4,11 @@ function App() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [todos, setTodos] = useState<
-    { id: number; text: string; completed: boolean }[]
+    { id: number; text: string; completed: boolean; references: number[] }[]
   >([
-    { id: 1, text: "할 일 1", completed: false },
-    { id: 2, text: "할 일 2", completed: false },
-    { id: 3, text: "할 일 3", completed: false },
+    { id: 1, text: "할 일 1", completed: false, references: [2, 3] },
+    { id: 2, text: "할 일 2", completed: false, references: [] },
+    { id: 3, text: "할 일 3", completed: false, references: [] },
   ]);
 
   const [editTodoId, setEditTodoId] = useState<number | null>(null);
@@ -37,7 +37,10 @@ function App() {
     const text = tempText.trim();
     if (text === "") return;
 
-    setTodos((prev) => [...prev, { id: Date.now(), text, completed: false }]);
+    setTodos((prev) => [
+      ...prev,
+      { id: Date.now(), text, completed: false, references: [] },
+    ]);
     inputRef.current!.value = "";
     inputRef.current?.focus();
   };
@@ -47,12 +50,21 @@ function App() {
   };
 
   const handleToggleTodo = (id: number) => {
-    // todo: 참조가 있을 경우 완료상태 변경 필요
-    setTodos((prev) =>
-      prev.map((todo) =>
+    setTodos((prev) => {
+      const target = prev.find((t) => t.id === id);
+      if (!target) return prev;
+      if (!target.completed) {
+        const allDone = target.references.every(
+          (ref) => prev.find((t) => t.id === ref)?.completed
+        );
+        if (!allDone) {
+          return prev;
+        }
+      }
+      return prev.map((todo) =>
         todo.id === id ? { ...todo, completed: !todo.completed } : todo
-      )
-    );
+      );
+    });
   };
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10">
@@ -115,16 +127,25 @@ function App() {
                 </div>
               ) : (
                 <>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={todo.completed}
-                      onChange={() => handleToggleTodo(todo.id)}
-                    />
-                    <span className={`${todo.completed ? "line-through" : ""}`}>
-                      {todo.text}
-                    </span>
-                  </label>
+                  <div className="flex flex-col items-center gap-2">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={todo.completed}
+                        onChange={() => handleToggleTodo(todo.id)}
+                      />
+                      <span
+                        className={`${todo.completed ? "line-through" : ""}`}
+                      >
+                        {todo.text}
+                      </span>
+                    </label>
+                    {todo.references.length > 0 && (
+                      <span className="text-xs text-gray-500">
+                        {todo.references.map((ref) => `@${ref}`).join(", ")}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex gap-2">
                     <button
                       className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
