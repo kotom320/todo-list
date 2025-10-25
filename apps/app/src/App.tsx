@@ -1,14 +1,22 @@
 import { useEffect, useState } from "react";
-import { todoApi } from "./api/todoApi";
 import { Pagination } from "./components/Pagination";
 import { TodoFilterComponent } from "./components/TodoFilter";
 import { TodoForm } from "./components/TodoForm";
 import { TodoList } from "./components/TodoList";
-import type { Todo } from "./types/todo";
+import {
+  useCreateTodo,
+  useDeleteTodo,
+  useTodos,
+  useUpdateTodo,
+} from "./hooks/useTodos";
 import { TodoFilter } from "./types/todo";
 
 function App() {
-  const [todos, setTodos] = useState<Todo[]>([]);
+  // React Query hooks
+  const { data: todos = [], isLoading, error } = useTodos();
+  const createTodoMutation = useCreateTodo();
+  const updateTodoMutation = useUpdateTodo();
+  const deleteTodoMutation = useDeleteTodo();
 
   const [editTodoId, setEditTodoId] = useState<number | null>(null);
   const [editTodoText, setEditTodoText] = useState<string>("");
@@ -50,13 +58,10 @@ function App() {
     );
 
     try {
-      const updatedTodo = await todoApi.updateTodo(editTodoId, {
-        text,
-        references: refs,
+      await updateTodoMutation.mutateAsync({
+        id: editTodoId,
+        updates: { text, references: refs },
       });
-      setTodos((prev) =>
-        prev.map((t) => (t.id === editTodoId ? updatedTodo : t))
-      );
       setEditTodoId(null);
       setEditTodoText("");
       setDraftRefs([]);
@@ -74,8 +79,7 @@ function App() {
     if (text === "") return;
 
     try {
-      const newTodo = await todoApi.createTodo(text);
-      setTodos((prev) => [...prev, newTodo]);
+      await createTodoMutation.mutateAsync({ text });
     } catch (err) {
       console.error(err);
     }
@@ -83,16 +87,7 @@ function App() {
 
   const handleDeleteTodo = async (id: number) => {
     try {
-      await todoApi.deleteTodo(id);
-      setTodos((prev) =>
-        prev
-          .map((t) =>
-            t.references.includes(id)
-              ? { ...t, references: t.references.filter((r) => r !== id) }
-              : t
-          )
-          .filter((t) => t.id !== id)
-      );
+      await deleteTodoMutation.mutateAsync(id);
     } catch (err) {
       console.error(err);
     }
@@ -113,12 +108,10 @@ function App() {
     }
 
     try {
-      const updatedTodo = await todoApi.updateTodo(id, {
-        completed: !target.completed,
+      await updateTodoMutation.mutateAsync({
+        id,
+        updates: { completed: !target.completed },
       });
-      setTodos((prev) =>
-        prev.map((todo) => (todo.id === id ? updatedTodo : todo))
-      );
     } catch (err) {
       console.error(err);
     }
@@ -143,20 +136,6 @@ function App() {
     setRefOpenId((prev) => (prev === id ? null : id));
   };
 
-  // 초기 데이터 로딩
-  useEffect(() => {
-    const loadTodos = async () => {
-      try {
-        const data = await todoApi.getAllTodos();
-        setTodos(data);
-      } catch (err) {
-        console.error(err);
-      }
-    };
-
-    loadTodos();
-  }, []);
-
   useEffect(() => {
     if (page > totalPages) setPage(totalPages);
   }, [totalPages, page]);
@@ -164,6 +143,27 @@ function App() {
   useEffect(() => {
     setPage(1);
   }, [filter]);
+
+  // 로딩 상태 처리
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+        <div className="text-lg">로딩중</div>
+      </div>
+    );
+  }
+
+  // 에러 상태 처리
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center">
+        <div className="text-lg text-red-600">
+          TODO List를 불러오는데 실패했습니다.
+        </div>
+        <div className="text-sm text-gray-600 mt-2">{error.message}</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-100 flex flex-col items-center py-10">
