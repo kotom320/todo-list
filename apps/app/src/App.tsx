@@ -15,6 +15,11 @@ function App() {
   const [editTodoText, setEditTodoText] = useState<string>("");
   const [draftRefs, setDraftRefs] = useState<number[]>([]);
   const [refOpenId, setRefOpenId] = useState<number | null>(null);
+  const [filter, setFilter] = useState<"all" | "active" | "completed">("all");
+
+  const filtered = todos.filter((t) =>
+    filter === "all" ? true : filter === "active" ? !t.completed : t.completed
+  );
 
   const handleEditTodo = (id: number, text: string) => {
     setEditTodoId(id);
@@ -109,8 +114,22 @@ function App() {
             추가
           </button>
         </form>
+        <div className="flex gap-2 justify-end">
+          {(["all", "active", "completed"] as const).map((f) => (
+            <button
+              key={f}
+              type="button"
+              className={`px-2 py-1 rounded border text-sm ${
+                filter === f ? "bg-gray-100 font-semibold" : ""
+              }`}
+              onClick={() => setFilter(f)}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
         <ul className="space-y-2">
-          {todos.map((todo) => (
+          {filtered.map((todo) => (
             <li key={todo.id} className="flex justify-between items-center">
               {editTodoId === todo.id ? (
                 <div className="flex items-center gap-2 justify-between w-full">
