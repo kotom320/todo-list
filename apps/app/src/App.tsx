@@ -82,10 +82,21 @@ function App() {
               {editTodoId === todo.id ? (
                 <div className="flex items-center gap-2 justify-between w-full">
                   <input
+                    autoFocus
                     type="text"
                     value={editTodoText}
                     onChange={(e) => setEditTodoText(e.target.value)}
                     className="flex-1 border rounded px-3 py-2"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSaveEditTodo();
+                      }
+                      if (e.key === "Escape") {
+                        e.preventDefault();
+                        setEditTodoId(null);
+                      }
+                    }}
                   />
                   <div className="flex gap-2">
                     <button
